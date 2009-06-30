@@ -1,0 +1,7 @@
+AURPAC - THIS IS FIRST COMMIT (OLD VERSION)
+
+aurpac ==> $PREFIX/bin/aurpac (755)
+config ==> $PREFIX/../etc/aurpac.conf (644)
+mod    ==> $PREFIX/share/aurpac/mod... (644)
+
+http://aur.archlinux.org/packages.php?ID=23919
