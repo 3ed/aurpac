@@ -1,0 +1,5 @@
+ID_U="$(id -u)" #make sure its right
+
+sudo="/usr/bin/sudo"
+pacman=("/usr/bin/pacman-color" "/usr/bin/pacman")
+inotifywait="/usr/bin/inotifywait"

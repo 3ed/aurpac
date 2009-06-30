@@ -1,0 +1,20 @@
+#lockfile="/var/lib/pacman/db.lck"
+#
+#if [ -e "$inotifywait" ]; then
+#	pacman_lock() {
+#		if [ -e "$lockfile" ]; then
+#			msg $"Waiting for finish working other instance of pacman.."
+#			$inotifywait -qq "$lockfile"
+#		fi
+#	}
+#else
+#	msg $'Use: "inotify-tools" - for kernel inotify mechinism..' w
+#	pacman_lock() {
+#		if [ -e "$lockfile" ]; then
+#			msg $"Waiting for finish working other instance of pacman.."
+#			until [ -e "$lockfile" ]; do
+#				sleep 1s
+#			done
+#		fi
+#	}
+#fi
