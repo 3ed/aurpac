@@ -1,7 +1,11 @@
-AURPAC - THIS IS FIRST COMMIT (OLD VERSION)
+PRE ALPHA VERSION
 
-aurpac ==> $PREFIX/bin/aurpac (755)
-config ==> $PREFIX/../etc/aurpac.conf (644)
-mod    ==> $PREFIX/share/aurpac/mod... (644)
-
-http://aur.archlinux.org/packages.php?ID=23919
+1. Run standalone ('a' or 'b')
+a) Run './aurpac' inside source dir
+b) Create './aurpac' yourself...
+  #!/bin/sh
+  PERLLIB="/source/dir" exec /source/dir/script/aurpac.pl "$@"
+2. Install (not tested)
+  perl Makefile.pl
+  make
+  sudo make install
