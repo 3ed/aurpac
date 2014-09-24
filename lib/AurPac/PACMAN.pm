@@ -28,6 +28,43 @@ sub vercmp {
     return ALPM->vercmp($a, $b)
 }
 
+=head2 list_sync_upgrades
+
+ all packages that need to be upgaded
+
+ output: [ my_name, sync_do, local_ver, repo_ver ]
+   my_name   - package name
+   ssync_do  - "u"(pgrade) or "d"(owngrade)
+   local_ver - ver from query db
+   repo_ver  - ver from sync db
+
+=cut
+
+sub list_sync_upgrades {
+    my $self = shift;
+    my @upgrades;
+
+    foreach my $db ($self->{alpm}->syncdbs) {
+        foreach my $repo ($self->{alpm}->register($db->name)) {
+            foreach my $pkg ($repo->pkgs) {
+                if (defined (my $local = $self->{alpm}->localdb->find($pkg->name))) {
+                    my $vercmp = $self->vercmp($pkg->version, $local->version);
+                    ($vercmp != 0)
+                        and push @upgrades, [
+                            $pkg->name,
+                            ($vercmp == 1) ? "u" : "d",
+                            $local->version,
+                            $pkg->version
+                        ];
+                }
+            }
+        }
+    }
+    return @upgrades
+}
+
+
+
 # TODO too much clumsy, rewrite...
 # eg: $orphaned = $self->query_filtr_orphan($self->query_all("version"));
 sub Qm {
