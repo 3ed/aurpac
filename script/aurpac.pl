@@ -63,9 +63,9 @@ USAGE:
     aurpac [mode] [args]
 
 MODES:
-    upgrade         invoke all „upgrade-*” modes
-    upgrade-aur     upgrade only aur packages
-    upgrade-cpan    upgrade cpan packages
+    update          invoke all „update-*” modes
+    update-aur      update only aur packages
+    update-cpan     update cpan packages
     pbget           get this pkgbuilds from aur
     search          search, and args:
         -0, .., -4  from quiet to verbosity
