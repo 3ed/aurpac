@@ -30,37 +30,52 @@ sub vercmp {
 
 =head2 list_sync_upgrades
 
- all packages that need to be upgaded
+ all packages that need to be upgaded or downgraded (eg. for warning message)
 
- output: [ my_name, sync_do, local_ver, repo_ver ]
-   my_name   - package name
-   ssync_do  - "u"(pgrade) or "d"(owngrade)
-   local_ver - ver from query db
-   repo_ver  - ver from sync db
+ output:
+ { 
+   upgrades => [
+     {
+       'repo'  => <blessed ALPM::Package object>,
+       'local' => <blessed ALPM::Package object>
+     },
+     {
+       ..........
+     }
+   ],
+   downgrades => [
+     { ........ }
+   ]
+ }
 
 =cut
 
 sub list_sync_upgrades {
     my $self = shift;
-    my @upgrades;
+    my $upgrades = {};
 
-    foreach my $db ($self->{alpm}->syncdbs) {
-        foreach my $repo ($self->{alpm}->register($db->name)) {
-            foreach my $pkg ($repo->pkgs) {
+    db: foreach my $db ($self->{alpm}->syncdbs) {
+        repo: foreach my $repo ($self->{alpm}->register($db->name)) {
+            pkg: foreach my $pkg ($repo->pkgs) {
                 if (defined (my $local = $self->{alpm}->localdb->find($pkg->name))) {
                     my $vercmp = $self->vercmp($pkg->version, $local->version);
-                    ($vercmp != 0)
-                        and push @upgrades, [
-                            $pkg->name,
-                            ($vercmp == 1) ? "u" : "d",
-                            $local->version,
-                            $pkg->version
-                        ];
+                    if ($vercmp == 0) {
+                        next pkg;
+                    } elsif ($vercmp == 1) {
+                        $vercmp = "upgrades";
+                    } else {
+                        $vercmp = "downgrades";
+                    }
+
+                    push @{$upgrades->{$vercmp}}, {
+                        repo  => $pkg,
+                        local => $local
+                    };
                 }
             }
         }
     }
-    return @upgrades
+    return $upgrades
 }
 
 
