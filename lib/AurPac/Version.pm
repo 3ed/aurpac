@@ -4,7 +4,7 @@ use v5.18;
 no if $] >= 5.018, warnings => "experimental::smartmatch";
 #no if $] >= 5.018, warnings => "experimental::lexical_subs";
 
-use version; our $VERSION = qv(0.1.8.12.2);
+use version; our $VERSION = qv(0.1.8.12.3);
 
 sub new {
     return bless(

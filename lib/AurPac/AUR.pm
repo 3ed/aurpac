@@ -4,13 +4,15 @@ use v5.18;
 no if $] >= 5.018, warnings => "experimental::smartmatch";
 #no if $] >= 5.018, warnings => "experimental::lexical_subs";
 
+# TODO Move all this to AurPac::CORE (glue) for autoload and split
+# TODO Rename this to AurPac::cli and print strings from here
+# TODO Remove all operations using function: system
+# TODO Add better support for metapackages from new AUR rpc
+
 use Archive::Extract;
 use File::Path qw(make_path);
 use AurPac::PACMAN;
-
-# TODO zrobiã z tego AurPac::cli; i wrzuciã tu tylko posklejane funkje i output
-# TODO pozbyc sie odwolan do binarek z calego kodu
-# TODO wyszukaj: TD#1
+use AurPac::Version;
 
 sub new {
     my ($class, $config) = @_;
@@ -31,6 +33,56 @@ sub new {
     $self->{pacman} = AurPac::PACMAN->new(\%{$self->{config}});
 
     return bless($self, $class);
+}
+sub run {
+    my ($self, $mode, @argv) = @_;
+
+    given($mode) {
+        when("search") {
+            my $depth = 3;
+            if ($argv[0] =~ m/^-([0-4])$/) {
+                $depth = $1;
+                shift @argv;
+            }
+            $self->search($depth, @argv);
+        }
+        when("update") {
+            $self->run("update-alpm", @argv);
+            $self->run("update-aur",  @argv);
+            $self->run("update-cpan", @argv);
+        }
+        when("update-alpm") {
+            print "update-alpm: not implemented yet...\n";
+        }
+        when("update-aur") {
+            print $_->[0]." " foreach ($self->aur_update(1));
+            print "\b\n";
+        }
+        when("update-cpan") { $self->cpan_update(1) }
+        when("pbget")       { $self->prepare_aursrc($_) foreach @argv }
+        default             { $self->usage }
+    }
+    1;
+}
+
+sub usage {
+    my $ver = AurPac::Version->new->ver;
+    print <<EOF
+aurpac $ver (c) 3ED @ terms of GPL3
+
+WARNING: THIS IS FIRST PRE! ALPHA VERSION.
+
+USAGE:
+    aurpac [mode] [args]
+
+MODES:
+    update          invoke all „update-*” modes
+    update-aur      update only aur packages
+    update-cpan     update cpan packages
+    pbget           get this pkgbuilds from aur
+    search          search, and args:
+        -0, .., -4  from quiet to verbosity
+EOF
 }
 
 sub net {
@@ -94,7 +146,7 @@ sub updateable {
 sub word_wrap { #TODO put into AurPac::Message              !!!!!!! TODO !!!!!!!
     my ($self, $tab, $text) = @_;
 
-    return undef unless defined $text;
+    return unless defined $text;
 
     $tab ||= 2;
     $tab = (" " x $tab);
@@ -155,17 +207,17 @@ sub aur_update {
 
     my $local = $self->{pacman}->Qm;
 
-    foreach (keys $self->{IgnorePkg}) {
+    foreach (keys %{$self->{IgnorePkg}}) {
         defined $local->{$_} and delete $local->{$_}
     }
 
-    my $pbmax = scalar keys $local;
+    my $pbmax = scalar keys %{$local};
 
     $self->msg->results(1, sprintf("found: %d package(s)", $pbmax), 1);
 
     $self->msg->print(2, "Analizing remote AUR db...", 0);
 
-    my $aur_infos = $self->net->aur("multiinfo", [ keys $local ]);
+    my $aur_infos = $self->net->aur("multiinfo", [ keys %{$local} ]);
     if ($aur_infos->{type} eq "info") {
         $self->msg->results(3, "error", 1);
         $self->msg->print(4, $aur_infos->{results}, 1);
@@ -207,7 +259,7 @@ sub aur_update {
 
     $self->msg->cl;
 
-    $self->msg->forgein($_)  foreach keys $local;
+    $self->msg->forgein($_)  foreach keys %{$local};
 
     $self->msg->print(2, "Analizing remote AUR db...", 0);
     $self->msg->results(1, sprintf(" found: %d package(s)", $c), 1);
@@ -248,12 +300,12 @@ sub cpan_update {
     }
     close $FH;
 
-    $self->msg->results(1, sprintf("found: %d package(s)", ( $#{[keys $db]} + 1 )), 1);
+    $self->msg->results(1, sprintf("found: %d package(s)", ( $#{[keys %{$db}]} + 1 )), 1);
 
     $self->msg->print(2, "Analizing remote AUR db...", 0);
 
     # Multiinfo, hiperszybkie w porówaniu do zwykłego info
-    my $aur_multiinfo = $self->net->aur("multiinfo", [sort keys $db]);
+    my $aur_multiinfo = $self->net->aur("multiinfo", [sort keys %{$db}]);
 
     if ( $aur_multiinfo->{type} eq "multiinfo" ) {
         $self->msg->results(1,
@@ -359,7 +411,7 @@ sub get_aursrc {
 
     unless ($results->{type} eq "aursrc") {
         warn sprintf("\e[31;1mError:\e[0m %s (%s)\n", $results->{results}, $pkg);
-        return undef;
+        return;
     }
 
     return $results->{results};
@@ -406,7 +458,7 @@ sub search {
 
     unless ($json->{"type"} eq "search") {
         warn sprintf("\e[31;1mError:\e[0m %s\n", $json->{results});
-        return undef;
+        return;
     }
 
 
