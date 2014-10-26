@@ -15,6 +15,7 @@ package AurPac::CORE;
 
 use strict;
 use warnings;
+use version; our $VERSION = qv(0.1.8.12.99);
 use AurPac::CORE::pacman;
 use AurPac::CORE::aur;
 #use AurPac::CORE::cpan;
@@ -30,11 +31,16 @@ sub new {
 
     $self = bless($self, $class);
 
+    $self->{Version}  = $VERSION;
+    $self->{CodeName} = "Hope";
+    $self->{MainName} = "aurpac-ng";
+    $self->{Stage}    = "predev";
+
     $self->{aur}    = AurPac::CORE::aur->new(    \%{$self} );
 #    $self->{cpan}   = AurPac::CORE::cpan->new(  \%{$self} );
     $self->{pacman} = AurPac::CORE::pacman->new( \%{$self} );
 
-    $self->{config} = AurPac::CONFIG->new( \%{$self} );
+    $self->{config} = AurPac::CONFIG->new(       \%{$self} );
 
     return $self;
 }

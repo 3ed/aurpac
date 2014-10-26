@@ -1,26 +1,21 @@
 package AurPac::cli;
 use v5.18;
-#use feature "lexical_subs";
 no if $] >= 5.018, warnings => "experimental::smartmatch";
-#no if $] >= 5.018, warnings => "experimental::lexical_subs";
 
 use Carp;
-use AurPac::Version;
-use AurPac::AUR;
-use AurPac::PACMAN;
-
-# TODO Może pacmana wstawić tutaj? Będzie mniej zachodu z kombinowaniem..
-#      Poprostu: my $foreign = $self->pacman( ipc => 1, argv => "-Qqm" );
+use AurPac::CORE;
 
 sub new {
     my ($class, %opts) = @_;
     my $self = {};
 
     while (my ($a, $b) = each %opts) {
-        $self->{$a} = $b;
+        $self->{config}->{$a} = $b;
     }
 
-    return bless($self, $class)    
+    $self->{core} = AurPac::CORE->new(\%{$self->{config}});
+
+    return bless($self, $class)
 }
 
 sub run {
@@ -50,18 +45,23 @@ sub run {
         when("pbget")       { $self->aur->prepare($_) foreach @argv }
         default             { $self->usage }
     }
-    1;
+    return 1;
 }
 
 sub usage {
-    my $ver = AurPac::Version->new->ver;
+    my $self = shift;
+    my $ver = $self->{core}->{Version};
+
     print <<EOF
 aurpac $ver (c) 3ED @ terms of GPL3
 
 WARNING: THIS IS FIRST PRE! ALPHA VERSION.
 
 USAGE:
-    aurpac [mode] [args]
+    ap [MODE] [ARGS]
+
+    ap [-h|--help]
+    ap [MODE] [-h|--help]
 
 MODES:
     update          invoke all „update-*” modes
@@ -71,56 +71,43 @@ MODES:
     search          search, and args:
         -0, .., -4  from quiet to verbosity
 EOF
-    1;
 }
 
 sub pacman {
     my ($self) = @_;
-
-    require AurPac::cli::pacman;
-
-    defined $self->{pacman}
-        or $self->{pacman} = AurPac::cli::pacman->new($self->{config})
-        or croak __PACKAGE__."->pacman: child module not loaded";
-
-    return $self->{pacman}
+    return $self->{core}->{pacman}
 }
 
 sub aur {
     my ($self) = @_;
-
-    defined $self->{aur} 
-        or $self->{aur} = AurPac::AUR->new($self->{config})
-        or croak __PACKAGE__."->aur: child module not loaded";
-
-    return $self->{aur}
+    return $self->{core}->{aur}
 }
 
 sub update {
     my ($self) = @_;
 
-    $self->pacman->update();
-    $self->aur->update();
-    $self->cpan->update();
+#    $self->pacman->update();
+#    $self->aur->update();
+#    $self->cpan->update();
 
-    return 1
+    return [1]
 }
 
 sub upgrade {
     my ($self) = @_;
 
-    # pacman -Su
-    $self->pacman->sysupdate;
+#    # pacman -Su
+#    $self->pacman->sysupdate;
+#
+#    # [aur like] -Su
+#    $self->aur->sysupdate;
 
-    # [aur like] -Su
-    $self->aur->sysupdate;
-
-    return 1
+    return [1]
 
 }
 
 sub search { # TODO
-    my ($self, $what, @where) = @_;
+    my ($self, $format, @what) = @_;
 
     $self->pacman->search($format, @what);
     $self->aur->search($format, @what);
@@ -128,3 +115,5 @@ sub search { # TODO
 
     return 1
 }
+
+1;
