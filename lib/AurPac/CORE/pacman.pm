@@ -81,25 +81,94 @@ sub list_sync_upgrades {
     return $upgrades
 }
 
+=head2 query
 
+=head3 query_list
 
-# TODO too much clumsy, rewrite...
-# eg: $orphaned = $self->query_filtr_orphan($self->query_all("version"));
-sub Qm {
-    my ($self) = @_;
+ return packages query array
 
-    my $local = {};
-    $local->{$_->name} = $_->version foreach $self->{alpm}->localdb->pkgs;
+ @pkgs = $core->{pacman}->query_list
 
-    foreach my $db ($self->{alpm}->syncdbs) {
-        foreach my $repo ($self->{alpm}->register($db->name)) {
-            foreach my $pkg ($repo->pkgs) {
-                defined $local->{$pkg->name} and delete $local->{$pkg->name}
+=cut
+
+sub query_list {
+    my $self = shift;
+    return $self->{alpm}->localdb->pkgs
+}
+
+=head3 query_filter_foreign
+
+  return foreign packages from any packages array
+
+  @pkgs = $core->{pacman}->query_filter_foreign($core->{pacman}->query_list)
+
+=cut
+
+sub query_filter_foreign {
+    my ($self, @pkgs) = @_;
+    my @foreign;
+    my @syncdbs = $self->{alpm}->syncdbs;
+
+=for comment TODO investigate
+ perl -e '
+   use AurPac::CORE;
+   my $c = AurPac::CORE->new;
+   printf("%s\n", $_->name)
+       foreach (
+           $c->{pacman}->query_filter_foreign(
+               $c->{pacman}->query_list
+           )
+       )
+ '|wc -l  
+ -- gives: 148
+
+ pacman -Qqm|wc -l
+ -- gives: 150
+=cut
+
+    foreach my $pkg (@pkgs) {
+        $self->{alpm}->find_dbs_satisfier($pkg->name, @syncdbs)
+            or push @foreign, $pkg;
+    }
+    return @foreign;
+}
+
+=head3 query_filter_search
+
+ search which works like filter (maybe slower but much more powerful), eg:
+
+ @pkgs = $core->{pacman}->query_filter_search(
+    [qw/one two/],
+    [$core->{pacman}->query_filter_foreign(
+        $core->{pacman}->query_list
+    )]
+ )
+
+ return only this foreign packages that contains this two words/regexps! inside package name or desc
+
+=cut
+
+sub query_filter_search {
+    my ($self, $query, $pkgs) = @_;
+
+    npkg: for (my $npkg = 0; $npkg >= $#{$pkgs}; $npkg++) {
+        str: foreach my $str (@{$query}) {
+            unless (
+                (@{$pkgs}[$npkg]->name =~ /$str/x)
+                    or (@{$pkgs}[$npkg]->desc =~ /$str/x)
+            ) {
+                # remove 1 element at n
+                splice @{$pkgs}, $npkg, 1;
+
+                # move n to next after last not deleted
+                $npkg--;
+
+                # do next in npkg loop
+                next npkg;
             }
         }
     }
-
-    return $local
+    return @{$pkgs}
 }
 
 1;
